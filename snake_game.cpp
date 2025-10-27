@@ -1,241 +1,205 @@
-#include <conio.h>
 #include <iostream>
-#include <windows.h>
-#include <vector>
-#include <string>
+#include <deque>
+#include <cstdlib>
+#include <ctime>
+#include <unistd.h>
+#include <termios.h>
+#include <thread>
+#include <chrono>
+#include <poll.h>
+
 using namespace std;
-void GameBoard::render(const string& playerName) {
-    SetCursorPosition(0, 0);
-    updateGrid();
-    // Top wall
-    for (int i = 0; i < width + 2; i++) cout << "-";
-    cout << endl;
-    for (int i = 0; i < height; i++) {
-        cout << "|";
-        for (int j = 0; j < width; j++) {
-            cout << grid[i][j];
-        }
-        cout << "|" << endl;
-    }
-    // Bottom wall
-    for (int i = 0; i < width + 2; i++) cout << "-";
-    cout << endl;
-    cout << playerName << "'s Score: " << score << endl;
-}
-// required header file
 
-// Forward declarations
-class Snake;
-class Food;
-class GameBoard;
-
-class Snake {
-public:
-    enum Direction { STOP = 0, LEFT, RIGHT, UP, DOWN };
-    struct Cell {
-        int x, y;
-    };
-    vector<Cell> body;
-    Direction dir;
-    Snake(int startX, int startY) {
-        dir = STOP;
-        for (int i = 0; i < 3; ++i) {
-            body.push_back({startX - i, startY});
-        }
-    }
-    void setDirection(Direction d) { dir = d; }
-    void move() {
-        if (dir == STOP) return;
-        // Move tail
-        for (int i = body.size() - 1; i > 0; --i) {
-            body[i] = body[i - 1];
-        }
-        // Move head
-        switch (dir) {
-        case LEFT:  body[0].x--; break;
-        case RIGHT: body[0].x++; break;
-        case UP:    body[0].y--; break;
-        case DOWN:  body[0].y++; break;
-        default: break;
-        }
-    }
-    void grow() {
-        body.push_back(body.back());
-    }
-    bool isCollision(int x, int y) {
-        for (size_t i = 0; i < body.size(); ++i) {
-            if (body[i].x == x && body[i].y == y) return true;
-        }
-        return false;
-    }
-    int headX() const { return body[0].x; }
-    int headY() const { return body[0].y; }
-};
-
-class Food {
-public:
+struct Point {
     int x, y;
-    Food(int gridW, int gridH) { x = rand() % gridW; y = rand() % gridH; }
-    void respawn(int gridW, int gridH, const std::vector<Snake::Cell>& snakeBody) {
-        while (true) {
-            x = rand() % gridW;
-            y = rand() % gridH;
-            bool onSnake = false;
-            for (const auto& cell : snakeBody) {
-                if (cell.x == x && cell.y == y) { onSnake = true; break; }
-            }
-            if (!onSnake) break;
-        }
+    bool operator==(const Point &other) const {
+        return x == other.x && y == other.y;
     }
 };
 
-class GameBoard {
-public:
+// ===== Terminal Setup for macOS =====
+void setBufferedInput(bool enable) {
+    static bool enabled = true;
+    static struct termios old;
+    struct termios newt;
+
+    if (enable && !enabled) {
+        tcsetattr(STDIN_FILENO, TCSANOW, &old);
+        enabled = true;
+    } else if (!enable && enabled) {
+        tcgetattr(STDIN_FILENO, &newt);
+        old = newt;
+        newt.c_lflag &= ~(ICANON | ECHO);
+        tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+        enabled = false;
+    }
+}
+
+bool kbhit() {
+    struct pollfd fds;
+    fds.fd = STDIN_FILENO;
+    fds.events = POLLIN;
+    return poll(&fds, 1, 0) > 0;
+}
+
+char getch() {
+    char c;
+    if (read(STDIN_FILENO, &c, 1) < 0) return 0;
+    return c;
+}
+
+// ===== Snake Game =====
+class SnakeGame {
+private:
     int width, height;
-    int score, highScore;
-    bool isGameOver;
-    Snake snake;
-    Food food;
-    std::vector<std::vector<char>> grid;
-        GameBoard(int w, int h)
-                : width(w), height(h), score(0), highScore(0), isGameOver(false),
-                    snake(w / 2, h / 2), food(w, h), grid(h, std::vector<char>(w, ' ')) {}
-    void render(const string& playerName);
-    void update() {
-        // Move snake
-        snake.move();
-        // Check wall collision
-        if (snake.headX() < 0 || snake.headX() >= width || snake.headY() < 0 || snake.headY() >= height) {
-            isGameOver = true;
-            if (score > highScore) highScore = score;
-            return;
-        }
-        // Check self collision
-        for (size_t i = 1; i < snake.body.size(); ++i) {
-            if (snake.body[i].x == snake.headX() && snake.body[i].y == snake.headY()) {
-                isGameOver = true;
-                if (score > highScore) highScore = score;
+    deque<Point> snake;
+    Point food;
+    char dir;
+    bool gameOver;
+    int score;
+
+public:
+    SnakeGame(int w = 30, int h = 20) {
+        width = w;
+        height = h;
+        srand(time(0));
+        reset();
+    }
+
+    void reset() {
+        snake.clear();
+        snake.push_back({width / 2, height / 2});
+        dir = 'R';
+        score = 0;
+        gameOver = false;
+        generateFood();
+    }
+
+    void generateFood() {
+        while (true) {
+            int fx = rand() % (width - 2) + 1;
+            int fy = rand() % (height - 2) + 1;
+            bool onSnake = false;
+            for (auto &s : snake)
+                if (s.x == fx && s.y == fy)
+                    onSnake = true;
+            if (!onSnake) {
+                food = {fx, fy};
                 return;
             }
         }
-        // Check food collision
-        if (snake.headX() == food.x && snake.headY() == food.y) {
-            score += 10;
-            snake.grow();
-            food.respawn(width, height, snake.body);
+    }
+
+    void draw() {
+        system("clear");
+        cout << "===== 🐍 SNAKE GAME =====\n";
+        cout << "Score: " << score << "\n\n";
+        cout << "Controls:\n";
+        cout << "  ↑  = Move Up\n";
+        cout << "  ↓  = Move Down\n";
+        cout << "  ←  = Move Left\n";
+        cout << "  →  = Move Right\n";
+        cout << "  Q  = Quit | R = Restart\n";
+        cout << "==========================\n\n";
+
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                if (y == 0 || y == height - 1 || x == 0 || x == width - 1)
+                    cout << "#";
+                else if (x == food.x && y == food.y)
+                    cout << "*";
+                else if (x == snake.front().x && y == snake.front().y)
+                    cout << "O";
+                else {
+                    bool body = false;
+                    for (size_t i = 1; i < snake.size(); i++) {
+                        if (snake[i].x == x && snake[i].y == y) {
+                            cout << "o";
+                            body = true;
+                            break;
+                        }
+                    }
+                    if (!body)
+                        cout << " ";
+                }
+            }
+            cout << "\n";
         }
     }
-    void handleInput() {
-        if (_kbhit()) {
-            int ch = _getch();
-            switch (ch) {
-            case 'a':
-            case 75: // Left arrow
-                if (snake.dir != Snake::RIGHT) snake.setDirection(Snake::LEFT);
-                break;
-            case 'd':
-            case 77: // Right arrow
-                if (snake.dir != Snake::LEFT) snake.setDirection(Snake::RIGHT);
-                break;
-            case 'w':
-            case 72: // Up arrow
-                if (snake.dir != Snake::DOWN) snake.setDirection(Snake::UP);
-                break;
-            case 's':
-            case 80: // Down arrow
-                if (snake.dir != Snake::UP) snake.setDirection(Snake::DOWN);
-                break;
-            case 'x':
-                isGameOver = true;
-                break;
+
+    void input() {
+        if (kbhit()) {
+            char c = getch();
+            if (c == '\x1B') { // Arrow keys start with ESC
+                char seq1 = getch();
+                char seq2 = getch();
+                if (seq1 == '[') {
+                    switch (seq2) {
+                        case 'A': if (dir != 'D') dir = 'U'; break; // Up
+                        case 'B': if (dir != 'U') dir = 'D'; break; // Down
+                        case 'C': if (dir != 'L') dir = 'R'; break; // Right
+                        case 'D': if (dir != 'R') dir = 'L'; break; // Left
+                    }
+                }
+            } else if (c == 'q' || c == 'Q') {
+                gameOver = true;
+            } else if ((c == 'r' || c == 'R') && gameOver) {
+                reset();
+                run();
             }
         }
     }
-    void reset() {
-        score = 0;
-        snake = Snake(width / 2, height / 2);
-        food.respawn(width, height, snake.body);
+
+    void logic() {
+        Point head = snake.front();
+        switch (dir) {
+            case 'U': head.y--; break;
+            case 'D': head.y++; break;
+            case 'L': head.x--; break;
+            case 'R': head.x++; break;
+        }
+
+        // Collisions
+        if (head.x == 0 || head.x == width - 1 || head.y == 0 || head.y == height - 1)
+            gameOver = true;
+        for (size_t i = 1; i < snake.size(); i++)
+            if (snake[i] == head) gameOver = true;
+
+        snake.push_front(head);
+
+        // Eat food
+        if (head == food) {
+            score += 10;
+            generateFood();
+        } else {
+            snake.pop_back();
+        }
     }
-    void updateGrid() {
-        // Clear grid
-        for (int i = 0; i < height; ++i)
-            for (int j = 0; j < width; ++j)
-                grid[i][j] = ' ';
-        // Place food
-        grid[food.y][food.x] = '#';
-        // Place snake
-        for (size_t i = 0; i < snake.body.size(); ++i) {
-            int sx = snake.body[i].x;
-            int sy = snake.body[i].y;
-            if (sx >= 0 && sx < width && sy >= 0 && sy < height)
-                grid[sy][sx] = (i == 0) ? 'O' : 'o';
+
+    void run() {
+        setBufferedInput(false);
+        while (!gameOver) {
+            draw();
+            input();
+            logic();
+            this_thread::sleep_for(chrono::milliseconds(400)); // 🐢 Slower speed
+        }
+        setBufferedInput(true);
+        system("clear");
+        cout << "\n💀 GAME OVER 💀\n";
+        cout << "Your Score: " << score << "\n";
+        cout << "Press 'R' to Restart or any key to Quit.\n";
+        char ch;
+        cin >> ch;
+        if (ch == 'r' || ch == 'R') {
+            reset();
+            run();
         }
     }
 };
-// Function to set cursor position in console
-void SetCursorPosition(int x, int y) {
-    COORD coord;
-    coord.X = x;
-    coord.Y = y;
-    SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), coord);
+
+int main() {
+    SnakeGame game(30, 20);
+    game.run();
+    return 0;
 }
-
-// height and width of the boundary
-const int width = 80;
-const int height = 20;
-
-// Function to initialize game variables
-// (Removed: handled by GameBoard class)
-
-// Remove the standalone GameRender function, as rendering is handled by GameBoard::render.
-
-// (Removed: UpdateGame function is obsolete. Game logic is handled by GameBoard::update.)
-
-// Function to set the game difficulty level
-int SetDifficulty()
-{
-    int dfc, choice;
-    cout << "\nSET DIFFICULTY\n1: Easy\n2: Medium\n3: hard "
-            "\nNOTE: if not chosen or pressed any other "
-            "key, the difficulty will be automatically set "
-            "to medium\nChoose difficulty level: ";
-    cin >> choice;
-    switch (choice) {
-    case '1':
-        dfc = 50;
-        break;
-    case '2':
-        dfc = 100;
-        break;
-    case '3':
-        dfc = 150;
-        break;
-    default:
-        dfc = 100;
-    }
-    return dfc;
-}
-
-// (Removed: UserInput function is obsolete. Input is handled by GameBoard::handleInput.)
-
-// Main function / game looping function
-int main()
-{
-    string playerName;
-    cout << "\n==============================\n";
-    cout << "      SNAKE GAME (IT603)      \n";
-    cout << "==============================\n";
-    cout << "Controls: W/A/S/D or Arrow Keys to move\n";
-    cout << "Eat '#' to grow. Avoid walls and yourself!\n";
-    cout << "Press 'X' anytime to exit.\n";
-    cout << "\nEnter your name: ";
-    cin >> playerName;
-    int baseDelay = 100; // Will be improved later
-
-    // Hide the blinking cursor
-    CONSOLE_CURSOR_INFO cursorInfo;
-    GetConsoleCursorInfo(GetStdHandle(STD_OUTPUT_HANDLE), &cursorInfo);
-    cursorInfo.bVisible = false;
-    SetConsoleCursorInfo(GetStdHandle(STD_OUTPUT_HANDLE), &cursorInfo);
-
-// (Removed: UserInput function is obsolete. Input is handled by GameBoard::handleInput.)
