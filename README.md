@@ -6,8 +6,8 @@ The Snake Game - Cross-Platform is a fun and interactive implementation of the c
 The game allows players to control the snake using arrow keys, trying to consume food while avoiding collisions with walls, obstacles, and the snake’s own body. As the snake eats food, it grows longer, and the game becomes more challenging. The player’s goal is to achieve the highest possible score without losing the game.
 
 Key features include a dynamic gameplay environment with randomly placed obstacles, a customizable grid size, and a smooth, responsive user interface.
+_Features_
 
-Features
 
 Cross-Platform Compatibility: The game is designed to work across various platforms using C++ and terminal-based graphics.
 
@@ -25,7 +25,7 @@ Score Tracking: Keeps track of the player's current score and the highest score 
 
 Simple Restart and Quit Options: After a game over, the player can restart the game or exit, making it easy to keep playing or end the session.
 
-System Architecture
+_System Architecture_
 
 The Snake Game - Cross-Platform follows a simple, modular architecture, with various components working together to provide smooth gameplay. The architecture can be broken down into the following key components:
 
@@ -99,7 +99,7 @@ Uses the termios library to disable buffered input, allowing for real-time keypr
 
 Controls screen clearing and redrawing using system("clear").
 
-Flow Overview:
+_Flow Overview:_
 
 Game Setup: The game initializes the snake, food, obstacles, and other variables.
 
@@ -113,7 +113,7 @@ Handles collisions and food consumption.
 
 Renders the updated game state to the screen.
 
-Technical Implementation
+_Technical Implementation_
 
 The Snake Game - Cross-Platform is implemented in C++ and uses a terminal-based interface with emoji-based graphics. Here's an overview of the technical details:
 
@@ -157,7 +157,7 @@ The main game loop handles drawing the game state, processing input, and updatin
 
 Vectors are used to store the snake's body and obstacles. These dynamic containers manage memory automatically.
 
-Installation & Compilation
+_Installation & Compilation_
 
 Follow these steps to set up and run the Snake Game - Cross-Platform:
 
@@ -178,7 +178,7 @@ Compile the Code:
 g++ -o snake_game main.cpp
 
 
-Run the Game:
+_Run the Game:_
 
 ./snake_game
 
@@ -224,7 +224,7 @@ Modular Code:
 
 Functions like setup(), input(), draw(), and logic() ensure clean, maintainable, and reusable code.
 
-Constants:
+_Constants:_
 
 Important values like width, height, and score are declared as constants for easy modifications.
 
@@ -265,7 +265,7 @@ Sound Effects and Music:
 
 Add background music and sound effects for a more immersive gaming experience.
 
-Team Contributors
+_Team Contributors_
 
 Hardi
 
