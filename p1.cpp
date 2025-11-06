@@ -24,6 +24,7 @@ vector<pair<int, int>> obstacles;
 
 int dirX = 1, dirY = 0;
 bool gameOver = false;
+bool paused = false;   // 🔹 Pause state
 int score = 0, maxScore = 0;
 string currentDir = "→";
 
@@ -127,6 +128,7 @@ void setup() {
     dirY = 0;
     score = 0;
     gameOver = false;
+    paused = false;
     currentDir = "→";
 
     obstacles.clear();
@@ -146,19 +148,16 @@ void draw() {
     getTerminalSize(termCols, termRows);
 
     // Centering calculation
-    int totalGameWidth = width * 2;  // each cell roughly 2 chars wide
-    int totalGameHeight = height + 5; // include top/bottom + text lines
+    int totalGameWidth = width * 2;  
+    int totalGameHeight = height + 5;
     int paddingLeft = max(0, (termCols - totalGameWidth) / 2);
     int paddingTop = max(0, (termRows - totalGameHeight) / 2);
 
-    // Move down
     for (int i = 0; i < paddingTop; i++) cout << "\n";
 
-    // Game header
     cout << string(paddingLeft, ' ') << "🐍 SNAKE (Emoji Edition) 🐍\n";
     cout << string(paddingLeft, ' ') << "Score: " << score << " | Max Score: " << maxScore << "\n\n";
 
-    // Game board
     for (int y = 0; y < height; y++) {
         cout << string(paddingLeft, ' ');
         for (int x = 0; x < width; x++) {
@@ -198,11 +197,12 @@ void draw() {
         cout << "\n";
     }
 
-    cout << "\n";
-    cout << string(paddingLeft, ' ');
+    cout << "\n" << string(paddingLeft, ' ');
 
-    if (!gameOver)
-        cout << "🎮 Controls: Arrow Keys → Move | Current: " << currentDir << "\n";
+    if (paused)
+        cout << "⏸️ GAME PAUSED — Press P to Resume\n";
+    else if (!gameOver)
+        cout << "🎮 Controls: Arrow Keys → Move | P → Pause | Current: " << currentDir << "\n";
     else {
         cout << "💀 GAME OVER 💀\n";
         cout << string(paddingLeft, ' ') << "Press R → Restart | Q → Quit\n";
@@ -220,6 +220,11 @@ void input() {
         int ch = getch();
 #endif
 
+        // 🔹 Handle normal keys first
+        if (ch == 'p' || ch == 'P') { paused = !paused; return; }
+        if (ch == 'q' || ch == 'Q') { gameOver = true; return; }
+        if ((ch == 'r' || ch == 'R') && gameOver) { setup(); return; }
+
 #ifdef _WIN32
         if (ch == 0 || ch == 224) ch = _getch();
 #else
@@ -233,18 +238,20 @@ void input() {
         }
 #endif
 
+        if (paused) return; // no movement when paused
+
         switch (ch) {
-        case 72: if (dirY == 0) { dirX = 0; dirY = -1; currentDir = "↑"; } break;
-        case 80: if (dirY == 0) { dirX = 0; dirY = 1; currentDir = "↓"; } break;
-        case 77: if (dirX == 0) { dirX = 1; dirY = 0; currentDir = "→"; } break;
-        case 75: if (dirX == 0) { dirX = -1; dirY = 0; currentDir = "←"; } break;
-        case 'q': case 'Q': gameOver = true; break;
-        case 'r': case 'R': if (gameOver) setup(); break;
+            case 72: if (dirY == 0) { dirX = 0; dirY = -1; currentDir = "↑"; } break;
+            case 80: if (dirY == 0) { dirX = 0; dirY = 1; currentDir = "↓"; } break;
+            case 77: if (dirX == 0) { dirX = 1; dirY = 0; currentDir = "→"; } break;
+            case 75: if (dirX == 0) { dirX = -1; dirY = 0; currentDir = "←"; } break;
         }
     }
 }
 
 void logic() {
+    if (paused || gameOver) return;
+
     int x = snake.front().first + dirX;
     int y = snake.front().second + dirY;
 
@@ -285,7 +292,7 @@ int main() {
     while (true) {
         draw();
         input();
-        if (!gameOver) logic();
+        logic();
 
 #ifdef _WIN32
         Sleep(150);
