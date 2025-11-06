@@ -34,6 +34,7 @@ Starts the snake with three body segments.
 Randomly places obstacles and food avoiding snake overlap.
 Input Handling (input())
 Captures real-time key input.
+
 Handles:
 Arrow keys → Movement
 P → Pause/Resume
@@ -47,6 +48,7 @@ Apple consumption → Increases score and length
 Power Fruit consumption → Doubles snake’s size and adds bonus score
 Rendering (draw())
 Redraws the game board each frame.
+
 Displays:
 🧱 Walls
 🟩 Snake
@@ -62,29 +64,35 @@ Uses the termios library for non-buffered input.
 Controls screen clearing and redrawing using escape sequences for a smooth visual experience.
 Flow Overview
 Game Setup: Initialize snake, food, obstacles, and other variables.
+
 Main Loop:
 Process user input.
 Update movement and logic.
 Detect collisions.
 Render new frame.
 Control speed using small delays.
+
 Pause Feature:
 Press P to pause and resume gameplay anytime.
+
 Power Fruit Mechanic:
 Appears randomly after several apples and disappears after eaten.
 Doubles snake’s size and increases score.
+
 Technical Implementation
 Programming Language
 Built entirely in C++ for performance and low-level control.
 Terminal Input/Output
 Emoji-based graphics for visual appeal.
 Non-buffered input for real-time control.
+
 Game Logic
 Snake stored as a vector of coordinate pairs.
 Head moves according to current direction.
 Power fruit doubles snake length instantly.
 Game over on collision.
 Rendering
+
 Grid display with:
 🧱 Walls
 🟩 Snake
@@ -97,6 +105,7 @@ Controlled using usleep(150000) for balanced speed.
 Memory Management
 Uses dynamic vectors for efficient storage of snake and obstacle positions.
 Installation & Compilation
+
 Prerequisites
 C++ Compiler (g++)
 Terminal environment (Linux/Mac recommended)
@@ -133,6 +142,7 @@ Separation of Concerns:
 Game logic is separated from rendering.
 Intuitive Flow:
 Smooth, easy-to-understand gameplay loop.
+
 Future Enhancements
 Graphics and GUI:
 Upgrade from terminal to GUI using SFML or SDL.
