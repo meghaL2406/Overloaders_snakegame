@@ -109,9 +109,5 @@ g++ snake.cpp -o snake
 - Implement score saving system.
 - Sound effects and color display.
 
----
-
-## 👨‍💻 Author
-**Zalak Thakkar**  
-A simple yet fun Snake Game with Power Fruit feature built for learning and demonstration purposes.
+--
 
