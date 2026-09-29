@@ -55,7 +55,7 @@ Results (for `p1_seamed.cpp`, the seamed file used in Part D):
 | Metric | Value |
 |--------|-------|
 | Lines executed | 28.15 % of 135 |
-| Branches taken at least once | 14.47 % of 235 |
+| Branches executed | 22.98 % of 235 |
 
 The low percentages reflect lines that belong to `draw()`, `input()`, `clearScreen()`, `getTerminalSize()`, `setup()`, and `main()` — none of which are called by the test suite. Only `logic()` and `placeFruit()` are exercised.
 
